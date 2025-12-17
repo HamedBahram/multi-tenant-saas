@@ -1,0 +1,363 @@
+'use client'
+
+import { useOptimistic, useTransition, useState } from 'react'
+import { Plus, Trash2 } from 'lucide-react'
+import {
+  KanbanBoard,
+  KanbanCard,
+  KanbanCards,
+  KanbanHeader,
+  KanbanProvider,
+} from '@/components/kibo-ui/kanban'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  updateTaskStatus,
+  reorderTasks,
+  deleteTask,
+  createTask,
+  type TaskWithAssignee,
+} from '@/app/actions/tasks'
+import { TaskStatus } from '@/lib/generated/prisma/client'
+
+const columns = [
+  { id: 'PLANNED', name: 'Planned', color: '#787774', bgColor: 'rgba(120, 119, 116, 0.15)' },
+  { id: 'IN_PROGRESS', name: 'In Progress', color: '#C4841D', bgColor: 'rgba(196, 132, 29, 0.15)' },
+  { id: 'DONE', name: 'Done', color: '#448361', bgColor: 'rgba(68, 131, 97, 0.15)' },
+] as const
+
+type TaskItem = {
+  id: string
+  name: string
+  column: string
+  status: TaskStatus
+  order: number
+  assigneeId: string | null
+  assignee: {
+    id: string
+    firstName: string | null
+    lastName: string | null
+    imageUrl: string | null
+    email: string | null
+  } | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+type OptimisticAction =
+  | { type: 'update_status'; taskId: string; newStatus: TaskStatus }
+  | { type: 'reorder'; tasks: TaskItem[] }
+  | { type: 'add'; task: TaskItem }
+  | { type: 'delete'; taskId: string }
+
+function tasksReducer(state: TaskItem[], action: OptimisticAction): TaskItem[] {
+  switch (action.type) {
+    case 'update_status':
+      return state.map(task =>
+        task.id === action.taskId
+          ? { ...task, status: action.newStatus, column: action.newStatus }
+          : task
+      )
+    case 'reorder':
+      return action.tasks
+    case 'add':
+      return [...state, action.task]
+    case 'delete':
+      return state.filter(task => task.id !== action.taskId)
+    default:
+      return state
+  }
+}
+
+interface PipelineProps {
+  initialTasks: TaskWithAssignee[]
+  projectId?: string
+}
+
+// Inline create task component for each column
+function InlineCreateTask({ 
+  projectId, 
+  status 
+}: { 
+  projectId?: string
+  status: TaskStatus 
+}) {
+  const [open, setOpen] = useState(false)
+  const [taskName, setTaskName] = useState('')
+  const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!taskName.trim()) return
+
+    setError(null)
+    startTransition(async () => {
+      const result = await createTask(taskName.trim(), projectId, status)
+      if (result.success) {
+        setTaskName('')
+        setOpen(false)
+      } else {
+        setError(result.error)
+      }
+    })
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+      >
+        <Plus className="h-4 w-4" />
+        <span>New</span>
+      </button>
+      
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <form onSubmit={handleSubmit}>
+            <DialogHeader>
+              <DialogTitle>Create New Task</DialogTitle>
+              <DialogDescription>
+                Add a new task to this column.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="inline-task-name">Task Name</Label>
+                <Input
+                  id="inline-task-name"
+                  placeholder="Enter task name..."
+                  value={taskName}
+                  onChange={e => setTaskName(e.target.value)}
+                  disabled={isPending}
+                  autoFocus
+                />
+              </div>
+              {error && <p className="text-sm text-red-500">{error}</p>}
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                disabled={isPending}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isPending || !taskName.trim()}>
+                {isPending ? 'Creating...' : 'Create Task'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
+export default function Pipeline({ initialTasks, projectId }: PipelineProps) {
+  const [isPending, startTransition] = useTransition()
+
+  // Transform tasks to include column field for kanban compatibility
+  const transformedTasks: TaskItem[] = initialTasks.map(task => ({
+    id: task.id,
+    name: task.name,
+    column: task.status,
+    status: task.status,
+    order: task.order,
+    assigneeId: task.assigneeId,
+    assignee: task.assignee,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+  }))
+
+  const [optimisticTasks, addOptimisticUpdate] = useOptimistic(
+    transformedTasks,
+    tasksReducer
+  )
+
+  const handleDelete = (taskId: string) => {
+    startTransition(async () => {
+      // Optimistically remove the task from UI
+      addOptimisticUpdate({ type: 'delete', taskId })
+
+      // Call the server action
+      const result = await deleteTask(taskId)
+      if (!result.success) {
+        console.error('Failed to delete task:', result.error)
+      }
+    })
+  }
+
+  const handleDataChange = (newData: TaskItem[]) => {
+    // Find tasks that changed columns
+    const changedTasks = newData.filter(newTask => {
+      const oldTask = optimisticTasks.find(t => t.id === newTask.id)
+      return oldTask && oldTask.column !== newTask.column
+    })
+
+    if (changedTasks.length > 0) {
+      const changedTask = changedTasks[0]
+      const newStatus = changedTask.column as TaskStatus
+
+      startTransition(async () => {
+        // Optimistically update the UI
+        addOptimisticUpdate({
+          type: 'update_status',
+          taskId: changedTask.id,
+          newStatus,
+        })
+
+        // Call the server action
+        const result = await updateTaskStatus(changedTask.id, newStatus)
+        if (!result.success) {
+          console.error('Failed to update task status:', result.error)
+        }
+      })
+    } else {
+      // Handle reordering within the same column
+      startTransition(async () => {
+        addOptimisticUpdate({ type: 'reorder', tasks: newData })
+
+        // Group tasks by column and update order
+        const tasksByColumn = newData.reduce(
+          (acc, task) => {
+            if (!acc[task.column]) acc[task.column] = []
+            acc[task.column].push(task.id)
+            return acc
+          },
+          {} as Record<string, string[]>
+        )
+
+        // Update each column's task order
+        for (const [column, taskIds] of Object.entries(tasksByColumn)) {
+          await reorderTasks(taskIds, column as TaskStatus)
+        }
+      })
+    }
+  }
+
+  const taskCount = (columnId: string) => 
+    optimisticTasks.filter(t => t.column === columnId).length
+
+  return (
+    <KanbanProvider
+      columns={columns.map(col => ({ ...col, id: col.id }))}
+      data={optimisticTasks}
+      onDataChange={handleDataChange}
+    >
+      {column => (
+        <KanbanBoard
+          id={column.id}
+          key={column.id}
+          className={`max-h-[600px] ${isPending ? 'opacity-70' : ''}`}
+        >
+          <KanbanHeader>
+            <div className="flex items-center gap-2">
+              {/* Notion-style colored pill badge */}
+              <span
+                className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium"
+                style={{ 
+                  backgroundColor: column.bgColor, 
+                  color: column.color 
+                }}
+              >
+                {column.name}
+              </span>
+              <span className="text-muted-foreground text-xs">
+                {taskCount(column.id)}
+              </span>
+            </div>
+          </KanbanHeader>
+          <KanbanCards id={column.id}>
+            {(task: TaskItem) => {
+              const assigneeName = task.assignee
+                ? [task.assignee.firstName, task.assignee.lastName]
+                    .filter(Boolean)
+                    .join(' ') || task.assignee.email
+                : null
+
+              const assigneeInitials = task.assignee
+                ? (task.assignee.firstName?.[0] ?? '') +
+                  (task.assignee.lastName?.[0] ?? '')
+                : '?'
+
+              return (
+                <KanbanCard
+                  column={column.id}
+                  id={task.id}
+                  key={task.id}
+                  name={task.name}
+                >
+                  <div className="flex flex-col gap-3">
+                    {/* Title */}
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="m-0 flex-1 font-medium leading-snug">
+                        {task.name}
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-destructive -mt-1 -mr-1 h-6 w-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 [[data-dragging]_&]:opacity-100"
+                        onClick={e => {
+                          e.stopPropagation()
+                          e.preventDefault()
+                          handleDelete(task.id)
+                        }}
+                        onPointerDown={e => e.stopPropagation()}
+                        onMouseDown={e => e.stopPropagation()}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        <span className="sr-only">Delete task</span>
+                      </Button>
+                    </div>
+
+                    {/* Assignee on left, date on right */}
+                    <div className="flex items-center justify-between text-muted-foreground text-xs">
+                      {task.assignee ? (
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage
+                              src={task.assignee.imageUrl ?? undefined}
+                            />
+                            <AvatarFallback className="text-[9px]">
+                              {assigneeInitials.toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span>{assigneeName}</span>
+                        </div>
+                      ) : (
+                        <div />
+                      )}
+                      <span>
+                        {new Date(task.createdAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                </KanbanCard>
+              )
+            }}
+          </KanbanCards>
+          {/* New task button at bottom of column */}
+          <div className="px-1 pb-2">
+            <InlineCreateTask projectId={projectId} status={column.id as TaskStatus} />
+          </div>
+        </KanbanBoard>
+      )}
+    </KanbanProvider>
+  )
+}

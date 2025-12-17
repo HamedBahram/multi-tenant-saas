@@ -1,0 +1,65 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TaskStatus {
+  PLANNED
+  IN_PROGRESS
+  DONE
+}
+
+model User {
+  id        String   @id // Clerk user ID
+  email     String?
+  firstName String?
+  lastName  String?
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tasks Task[] @relation("TaskAssignee")
+
+  @@index([email])
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  name      String
+  orgId     String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tasks     Task[]
+
+  @@unique([orgId, isDefault], name: "org_default_project")
+  @@index([orgId])
+}
+
+model Task {
+  id        String     @id @default(cuid())
+  name      String
+  status    TaskStatus @default(PLANNED)
+  order     Int        @default(0)
+  orgId     String
+  projectId String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Relations
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assigneeId String?
+  assignee   User?   @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  @@index([orgId])
+  @@index([projectId])
+  @@index([status])
+  @@index([assigneeId])
+}
