@@ -51,9 +51,9 @@ export default async function Home() {
   return (
     <>
       <SignedOut>
-        <section className='relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden'>
+        <section className='relative -z-10 flex min-h-[calc(100vh-6rem)] items-center justify-center overflow-hidden'>
           {/* Background decoration */}
-          <div className='absolute inset-0 -z-10'>
+          <div className='absolute inset-0 -z-20'>
             <div className='bg-primary/5 absolute top-1/4 left-1/4 h-96 w-96 rounded-full blur-3xl' />
             <div className='bg-chart-1/10 absolute right-1/4 bottom-1/4 h-80 w-80 rounded-full blur-3xl' />
             <div className='from-chart-2/5 absolute top-1/2 left-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-linear-to-br to-transparent blur-3xl' />
