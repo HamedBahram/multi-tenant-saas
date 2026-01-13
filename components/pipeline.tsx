@@ -98,15 +98,19 @@ function tasksReducer(state: TaskItem[], action: OptimisticAction): TaskItem[] {
 interface PipelineProps {
   initialTasks: TaskWithAssignee[]
   projectId?: string
+  /** Callback to trigger SWR revalidation after mutations */
+  onMutate?: () => void
 }
 
 // Inline create task component for each column
 function InlineCreateTask({
   projectId,
   status,
+  onTaskCreated,
 }: {
   projectId?: string
   status: TaskStatus
+  onTaskCreated?: () => void
 }) {
   const [open, setOpen] = useState(false)
   const [taskName, setTaskName] = useState('')
@@ -123,6 +127,7 @@ function InlineCreateTask({
       if (result.success) {
         setTaskName('')
         setOpen(false)
+        onTaskCreated?.()
       } else {
         setError(result.error)
       }
@@ -182,7 +187,11 @@ function InlineCreateTask({
   )
 }
 
-export default function Pipeline({ initialTasks, projectId }: PipelineProps) {
+export default function Pipeline({
+  initialTasks,
+  projectId,
+  onMutate,
+}: PipelineProps) {
   const [isPending, startTransition] = useTransition()
   const [editingTask, setEditingTask] = useState<{
     id: string
@@ -239,6 +248,8 @@ export default function Pipeline({ initialTasks, projectId }: PipelineProps) {
       if (!result.success) {
         console.error('Failed to delete task:', result.error)
       }
+      // Trigger SWR revalidation for realtime sync
+      onMutate?.()
     })
   }
 
@@ -266,6 +277,8 @@ export default function Pipeline({ initialTasks, projectId }: PipelineProps) {
         if (!result.success) {
           console.error('Failed to update task status:', result.error)
         }
+        // Trigger SWR revalidation for realtime sync
+        onMutate?.()
       })
     } else {
       // Handle reordering within the same column
@@ -286,6 +299,8 @@ export default function Pipeline({ initialTasks, projectId }: PipelineProps) {
         for (const [column, taskIds] of Object.entries(tasksByColumn)) {
           await reorderTasks(taskIds, column as TaskStatus)
         }
+        // Trigger SWR revalidation for realtime sync
+        onMutate?.()
       })
     }
   }
@@ -420,6 +435,7 @@ export default function Pipeline({ initialTasks, projectId }: PipelineProps) {
               <InlineCreateTask
                 projectId={projectId}
                 status={column.id as TaskStatus}
+                onTaskCreated={onMutate}
               />
             </div>
           </KanbanBoard>
