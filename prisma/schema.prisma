@@ -39,7 +39,6 @@ model Project {
   updatedAt DateTime @updatedAt
   tasks     Task[]
 
-  @@unique([orgId, isDefault], name: "org_default_project")
   @@index([orgId])
 }
 

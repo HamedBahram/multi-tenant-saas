@@ -17,7 +17,9 @@ export default async function Header() {
     <header className='bg-background/50 fixed top-0 right-0 left-0 py-6 backdrop-blur-sm'>
       <div className='container max-w-7xl'>
         <div className='flex items-center justify-between'>
-          <OrganizationSwitcher />
+          <SignedIn>
+            <OrganizationSwitcher />
+          </SignedIn>
 
           {!hasPro && (
             <SignedIn>
