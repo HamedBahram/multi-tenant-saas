@@ -197,6 +197,40 @@ export async function deleteTask(taskId: string): Promise<ActionResult> {
   }
 }
 
+export async function updateTask(
+  taskId: string,
+  data: { name?: string }
+): Promise<ActionResult> {
+  try {
+    const orgId = await getOrgIdOrThrow()
+
+    // Verify task belongs to this org
+    const task = await db.task.findFirst({
+      where: { id: taskId, orgId },
+    })
+
+    if (!task) {
+      return { success: false, error: 'Task not found' }
+    }
+
+    await db.task.update({
+      where: { id: taskId },
+      data: {
+        ...(data.name !== undefined && { name: data.name }),
+      },
+    })
+
+    revalidatePath('/')
+    return { success: true, data: undefined }
+  } catch (error) {
+    console.error('Failed to update task:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update task',
+    }
+  }
+}
+
 export async function getTasks(projectId?: string) {
   const orgId = await getOrgIdOrThrow()
 
@@ -226,3 +260,57 @@ export async function getTasks(projectId?: string) {
 
 export type TaskWithAssignee = Awaited<ReturnType<typeof getTasks>>[number]
 
+export async function getDashboardStats() {
+  const orgId = await getOrgIdOrThrow()
+
+  // Get all tasks for this org
+  const tasks = await db.task.findMany({
+    where: { orgId },
+    include: { assignee: true, project: true },
+    orderBy: { updatedAt: 'desc' },
+  })
+
+  // Get project count
+  const projectCount = await db.project.count({
+    where: { orgId },
+  })
+
+  // Get projects with task counts
+  const projects = await db.project.findMany({
+    where: { orgId },
+    include: {
+      _count: {
+        select: { tasks: true },
+      },
+    },
+    orderBy: { createdAt: 'asc' },
+  })
+
+  // Calculate tasks by status
+  const tasksByStatus: Record<TaskStatus, number> = {
+    PLANNED: 0,
+    IN_PROGRESS: 0,
+    DONE: 0,
+  }
+
+  for (const task of tasks) {
+    tasksByStatus[task.status]++
+  }
+
+  // Get recent tasks (last 5 updated)
+  const recentTasks = tasks.slice(0, 5)
+
+  return {
+    tasksByStatus,
+    recentTasks,
+    totalTasks: tasks.length,
+    projectCount,
+    projects: projects.map(p => ({
+      id: p.id,
+      name: p.name,
+      taskCount: p._count.tasks,
+    })),
+  }
+}
+
+export type DashboardStats = Awaited<ReturnType<typeof getDashboardStats>>

@@ -19,9 +19,7 @@ export default async function Header() {
       <div className='container max-w-7xl'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-4'>
-            <Link href='/'>
-              <Logo />
-            </Link>
+            <Logo />
             <SignedIn>
               <OrganizationSwitcher />
             </SignedIn>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useOptimistic, useTransition, useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Pencil } from 'lucide-react'
 import {
   KanbanBoard,
   KanbanCard,
@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { EditTaskDialog } from '@/components/edit-task-dialog'
 import {
   updateTaskStatus,
   reorderTasks,
@@ -168,6 +169,8 @@ function InlineCreateTask({
 
 export default function Pipeline({ initialTasks, projectId }: PipelineProps) {
   const [isPending, startTransition] = useTransition()
+  const [editingTask, setEditingTask] = useState<{ id: string; name: string } | null>(null)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
 
   // Transform tasks to include column field for kanban compatibility
   const transformedTasks: TaskItem[] = initialTasks.map(task => ({
@@ -186,6 +189,11 @@ export default function Pipeline({ initialTasks, projectId }: PipelineProps) {
     transformedTasks,
     tasksReducer
   )
+
+  const handleEdit = (task: TaskItem) => {
+    setEditingTask({ id: task.id, name: task.name })
+    setIsEditDialogOpen(true)
+  }
 
   const handleDelete = (taskId: string) => {
     startTransition(async () => {
@@ -252,112 +260,137 @@ export default function Pipeline({ initialTasks, projectId }: PipelineProps) {
     optimisticTasks.filter(t => t.column === columnId).length
 
   return (
-    <KanbanProvider
-      columns={columns.map(col => ({ ...col, id: col.id }))}
-      data={optimisticTasks}
-      onDataChange={handleDataChange}
-    >
-      {column => (
-        <KanbanBoard
-          id={column.id}
-          key={column.id}
-          className={`max-h-[600px] ${isPending ? 'opacity-70' : ''}`}
-        >
-          <KanbanHeader>
-            <div className="flex items-center gap-2">
-              {/* Notion-style colored pill badge */}
-              <span
-                className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium"
-                style={{ 
-                  backgroundColor: column.bgColor, 
-                  color: column.color 
-                }}
-              >
-                {column.name}
-              </span>
-              <span className="text-muted-foreground text-xs">
-                {taskCount(column.id)}
-              </span>
-            </div>
-          </KanbanHeader>
-          <KanbanCards id={column.id}>
-            {(task: TaskItem) => {
-              const assigneeName = task.assignee
-                ? [task.assignee.firstName, task.assignee.lastName]
-                    .filter(Boolean)
-                    .join(' ') || task.assignee.email
-                : null
-
-              const assigneeInitials = task.assignee
-                ? (task.assignee.firstName?.[0] ?? '') +
-                  (task.assignee.lastName?.[0] ?? '')
-                : '?'
-
-              return (
-                <KanbanCard
-                  column={column.id}
-                  id={task.id}
-                  key={task.id}
-                  name={task.name}
+    <>
+      <KanbanProvider
+        columns={columns.map(col => ({ ...col, id: col.id }))}
+        data={optimisticTasks}
+        onDataChange={handleDataChange}
+      >
+        {column => (
+          <KanbanBoard
+            id={column.id}
+            key={column.id}
+            className={`max-h-[600px] ${isPending ? 'opacity-70' : ''}`}
+          >
+            <KanbanHeader>
+              <div className="flex items-center gap-2">
+                {/* Notion-style colored pill badge */}
+                <span
+                  className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium"
+                  style={{ 
+                    backgroundColor: column.bgColor, 
+                    color: column.color 
+                  }}
                 >
-                  <div className="flex flex-col gap-3">
-                    {/* Title */}
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="m-0 flex-1 font-medium leading-snug">
-                        {task.name}
-                      </p>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground hover:text-destructive -mt-1 -mr-1 h-6 w-6 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 [[data-dragging]_&]:opacity-100"
-                        onClick={e => {
-                          e.stopPropagation()
-                          e.preventDefault()
-                          handleDelete(task.id)
-                        }}
-                        onPointerDown={e => e.stopPropagation()}
-                        onMouseDown={e => e.stopPropagation()}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        <span className="sr-only">Delete task</span>
-                      </Button>
-                    </div>
+                  {column.name}
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  {taskCount(column.id)}
+                </span>
+              </div>
+            </KanbanHeader>
+            <KanbanCards id={column.id}>
+              {(task: TaskItem) => {
+                const assigneeName = task.assignee
+                  ? [task.assignee.firstName, task.assignee.lastName]
+                      .filter(Boolean)
+                      .join(' ') || task.assignee.email
+                  : null
 
-                    {/* Assignee on left, date on right */}
-                    <div className="flex items-center justify-between text-muted-foreground text-xs">
-                      {task.assignee ? (
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-5 w-5">
-                            <AvatarImage
-                              src={task.assignee.imageUrl ?? undefined}
-                            />
-                            <AvatarFallback className="text-[9px]">
-                              {assigneeInitials.toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span>{assigneeName}</span>
+                const assigneeInitials = task.assignee
+                  ? (task.assignee.firstName?.[0] ?? '') +
+                    (task.assignee.lastName?.[0] ?? '')
+                  : '?'
+
+                return (
+                  <KanbanCard
+                    column={column.id}
+                    id={task.id}
+                    key={task.id}
+                    name={task.name}
+                  >
+                    <div className="flex flex-col gap-3">
+                      {/* Title */}
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="m-0 flex-1 font-medium leading-snug">
+                          {task.name}
+                        </p>
+                        <div className="flex items-center gap-0.5 -mt-1 -mr-1 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 [[data-dragging]_&]:opacity-100">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-foreground h-6 w-6"
+                            onClick={e => {
+                              e.stopPropagation()
+                              e.preventDefault()
+                              handleEdit(task)
+                            }}
+                            onPointerDown={e => e.stopPropagation()}
+                            onMouseDown={e => e.stopPropagation()}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            <span className="sr-only">Edit task</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-destructive h-6 w-6"
+                            onClick={e => {
+                              e.stopPropagation()
+                              e.preventDefault()
+                              handleDelete(task.id)
+                            }}
+                            onPointerDown={e => e.stopPropagation()}
+                            onMouseDown={e => e.stopPropagation()}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span className="sr-only">Delete task</span>
+                          </Button>
                         </div>
-                      ) : (
-                        <div />
-                      )}
-                      <span>
-                        {new Date(task.createdAt).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </span>
+                      </div>
+
+                      {/* Assignee on left, date on right */}
+                      <div className="flex items-center justify-between text-muted-foreground text-xs">
+                        {task.assignee ? (
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-5 w-5">
+                              <AvatarImage
+                                src={task.assignee.imageUrl ?? undefined}
+                              />
+                              <AvatarFallback className="text-[9px]">
+                                {assigneeInitials.toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span>{assigneeName}</span>
+                          </div>
+                        ) : (
+                          <div />
+                        )}
+                        <span>
+                          {new Date(task.createdAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </KanbanCard>
-              )
-            }}
-          </KanbanCards>
-          {/* New task button at bottom of column */}
-          <div className="px-1 pb-2">
-            <InlineCreateTask projectId={projectId} status={column.id as TaskStatus} />
-          </div>
-        </KanbanBoard>
-      )}
-    </KanbanProvider>
+                  </KanbanCard>
+                )
+              }}
+            </KanbanCards>
+            {/* New task button at bottom of column */}
+            <div className="px-1 pb-2">
+              <InlineCreateTask projectId={projectId} status={column.id as TaskStatus} />
+            </div>
+          </KanbanBoard>
+        )}
+      </KanbanProvider>
+
+      <EditTaskDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        task={editingTask}
+      />
+    </>
   )
 }

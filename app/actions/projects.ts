@@ -125,3 +125,34 @@ export async function checkProAccess(): Promise<boolean> {
   return has?.({ plan: 'pro' }) ?? false
 }
 
+export async function renameProject(
+  projectId: string,
+  newName: string
+): Promise<ActionResult> {
+  try {
+    const orgId = await getOrgIdOrThrow()
+
+    const project = await db.project.findFirst({
+      where: { id: projectId, orgId },
+    })
+
+    if (!project) {
+      return { success: false, error: 'Project not found' }
+    }
+
+    await db.project.update({
+      where: { id: projectId },
+      data: { name: newName },
+    })
+
+    revalidatePath('/')
+    return { success: true, data: undefined }
+  } catch (error) {
+    console.error('Failed to rename project:', error)
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : 'Failed to rename project',
+    }
+  }
+}
