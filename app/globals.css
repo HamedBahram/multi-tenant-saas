@@ -135,6 +135,11 @@
   }
 }
 
+/* Ensure Clerk drawer appears above the header */
+.cl-drawerRoot {
+  z-index: 50 !important;
+}
+
 @utility container {
   margin-inline: auto;
   padding-inline: 1rem;

@@ -15,7 +15,7 @@ export default async function Header() {
   const hasPro = has?.({ plan: 'pro' }) ?? false
 
   return (
-    <header className='bg-background/50 fixed top-0 right-0 left-0 z-50 py-4 backdrop-blur-sm sm:py-6'>
+    <header className='bg-background/50 fixed top-0 right-0 left-0 z-40 py-4 backdrop-blur-sm sm:py-6'>
       <div className='container max-w-7xl'>
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-2 sm:gap-4'>
@@ -29,7 +29,7 @@ export default async function Header() {
             {!hasPro && (
               <SignedIn>
                 <Button asChild variant='ghost' size='sm'>
-                  <Link href='/pricing'>✨ Upgrade to Pro</Link>
+                  <Link href='/pricing'>✨ Upgrade</Link>
                 </Button>
               </SignedIn>
             )}
