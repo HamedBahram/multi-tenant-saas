@@ -35,7 +35,7 @@ export default async function DashboardPage() {
       : 0
 
   return (
-    <section className='w-full py-16'>
+    <section className='w-full py-32'>
       <div className='container max-w-7xl'>
         {/* Header */}
         <div className='mb-8'>
@@ -132,7 +132,7 @@ export default async function DashboardPage() {
                 </div>
 
                 {/* Progress bar */}
-                <div className='h-3 w-full overflow-hidden rounded-full bg-secondary'>
+                <div className='bg-secondary h-3 w-full overflow-hidden rounded-full'>
                   <div
                     className='h-full rounded-full bg-emerald-500 transition-all duration-500'
                     style={{ width: `${completionRate}%` }}
@@ -240,7 +240,7 @@ export default async function DashboardPage() {
                         key={task.id}
                         className='flex items-center justify-between gap-4 rounded-lg border p-3'
                       >
-                        <div className='flex items-center gap-3 min-w-0'>
+                        <div className='flex min-w-0 items-center gap-3'>
                           {task.assignee && (
                             <Avatar className='h-8 w-8 shrink-0'>
                               <AvatarImage
