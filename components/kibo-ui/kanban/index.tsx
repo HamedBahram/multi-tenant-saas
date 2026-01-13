@@ -212,8 +212,17 @@ export const KanbanProvider = <
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
 
   const sensors = useSensors(
-    useSensor(MouseSensor),
-    useSensor(TouchSensor),
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 5, // 5px movement required before drag starts
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200, // 200ms hold required before drag starts
+        tolerance: 5, // 5px movement tolerance during delay
+      },
+    }),
     useSensor(KeyboardSensor)
   );
 
@@ -317,14 +326,21 @@ export const KanbanProvider = <
         sensors={sensors}
         {...props}
       >
-        <div
-          className={cn(
-            "grid size-full auto-cols-fr grid-flow-col gap-4",
-            className
-          )}
-        >
-          {columns.map((column) => children(column))}
-        </div>
+        <ScrollArea className="relative z-0 w-full">
+          <div
+            className={cn(
+              "flex gap-4 pb-4 md:grid md:auto-cols-fr md:grid-flow-col",
+              className
+            )}
+          >
+            {columns.map((column) => (
+              <div key={column.id} className="w-[280px] shrink-0 md:w-auto">
+                {children(column)}
+              </div>
+            ))}
+          </div>
+          <ScrollBar orientation="horizontal" className="md:hidden" />
+        </ScrollArea>
         {typeof window !== "undefined" &&
           createPortal(
             <DragOverlay>

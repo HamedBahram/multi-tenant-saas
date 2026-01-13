@@ -15,17 +15,17 @@ export default async function Header() {
   const hasPro = has?.({ plan: 'pro' }) ?? false
 
   return (
-    <header className='bg-background/50 fixed top-0 right-0 left-0 py-6 backdrop-blur-sm'>
+    <header className='bg-background/50 fixed top-0 right-0 left-0 z-50 py-4 backdrop-blur-sm sm:py-6'>
       <div className='container max-w-7xl'>
         <div className='flex items-center justify-between'>
-          <div className='flex items-center gap-4'>
+          <div className='flex items-center gap-2 sm:gap-4'>
             <Logo />
             <SignedIn>
               <OrganizationSwitcher />
             </SignedIn>
           </div>
 
-          <div className='flex items-center gap-4'>
+          <div className='flex items-center gap-2 sm:gap-4'>
             {!hasPro && (
               <SignedIn>
                 <Button asChild variant='ghost' size='sm'>

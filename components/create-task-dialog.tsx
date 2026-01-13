@@ -50,9 +50,9 @@ export function CreateTaskDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size='sm'>
+        <Button size='sm' className='sm:px-3'>
           <Plus className='size-4' />
-          New Task
+          <span className='hidden sm:inline'>New Task</span>
         </Button>
       </DialogTrigger>
       <DialogContent className='sm:max-w-[425px]'>

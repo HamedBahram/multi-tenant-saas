@@ -32,9 +32,24 @@ import {
 import { TaskStatus } from '@/lib/generated/prisma/client'
 
 const columns = [
-  { id: 'PLANNED', name: 'Planned', color: '#787774', bgColor: 'rgba(120, 119, 116, 0.15)' },
-  { id: 'IN_PROGRESS', name: 'In Progress', color: '#C4841D', bgColor: 'rgba(196, 132, 29, 0.15)' },
-  { id: 'DONE', name: 'Done', color: '#448361', bgColor: 'rgba(68, 131, 97, 0.15)' },
+  {
+    id: 'PLANNED',
+    name: 'Planned',
+    color: '#787774',
+    bgColor: 'rgba(120, 119, 116, 0.15)',
+  },
+  {
+    id: 'IN_PROGRESS',
+    name: 'In Progress',
+    color: '#C4841D',
+    bgColor: 'rgba(196, 132, 29, 0.15)',
+  },
+  {
+    id: 'DONE',
+    name: 'Done',
+    color: '#448361',
+    bgColor: 'rgba(68, 131, 97, 0.15)',
+  },
 ] as const
 
 type TaskItem = {
@@ -86,12 +101,12 @@ interface PipelineProps {
 }
 
 // Inline create task component for each column
-function InlineCreateTask({ 
-  projectId, 
-  status 
-}: { 
+function InlineCreateTask({
+  projectId,
+  status,
+}: {
   projectId?: string
-  status: TaskStatus 
+  status: TaskStatus
 }) {
   const [open, setOpen] = useState(false)
   const [taskName, setTaskName] = useState('')
@@ -118,14 +133,14 @@ function InlineCreateTask({
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+        className='text-muted-foreground hover:bg-accent/50 hover:text-foreground flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm transition-colors'
       >
-        <Plus className="h-4 w-4" />
+        <Plus className='h-4 w-4' />
         <span>New</span>
       </button>
-      
+
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className='sm:max-w-[425px]'>
           <form onSubmit={handleSubmit}>
             <DialogHeader>
               <DialogTitle>Create New Task</DialogTitle>
@@ -133,30 +148,30 @@ function InlineCreateTask({
                 Add a new task to this column.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="inline-task-name">Task Name</Label>
+            <div className='grid gap-4 py-4'>
+              <div className='grid gap-2'>
+                <Label htmlFor='inline-task-name'>Task Name</Label>
                 <Input
-                  id="inline-task-name"
-                  placeholder="Enter task name..."
+                  id='inline-task-name'
+                  placeholder='Enter task name...'
                   value={taskName}
                   onChange={e => setTaskName(e.target.value)}
                   disabled={isPending}
                   autoFocus
                 />
               </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
+              {error && <p className='text-sm text-red-500'>{error}</p>}
             </div>
             <DialogFooter>
               <Button
-                type="button"
-                variant="outline"
+                type='button'
+                variant='outline'
                 onClick={() => setOpen(false)}
                 disabled={isPending}
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isPending || !taskName.trim()}>
+              <Button type='submit' disabled={isPending || !taskName.trim()}>
                 {isPending ? 'Creating...' : 'Create Task'}
               </Button>
             </DialogFooter>
@@ -169,8 +184,16 @@ function InlineCreateTask({
 
 export default function Pipeline({ initialTasks, projectId }: PipelineProps) {
   const [isPending, startTransition] = useTransition()
-  const [editingTask, setEditingTask] = useState<{ id: string; name: string } | null>(null)
+  const [editingTask, setEditingTask] = useState<{
+    id: string
+    name: string
+  } | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [deletingTask, setDeletingTask] = useState<{
+    id: string
+    name: string
+  } | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
   // Transform tasks to include column field for kanban compatibility
   const transformedTasks: TaskItem[] = initialTasks.map(task => ({
@@ -195,7 +218,18 @@ export default function Pipeline({ initialTasks, projectId }: PipelineProps) {
     setIsEditDialogOpen(true)
   }
 
-  const handleDelete = (taskId: string) => {
+  const handleDeleteClick = (task: TaskItem) => {
+    setDeletingTask({ id: task.id, name: task.name })
+    setIsDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = () => {
+    if (!deletingTask) return
+
+    const taskId = deletingTask.id
+    setIsDeleteDialogOpen(false)
+    setDeletingTask(null)
+
     startTransition(async () => {
       // Optimistically remove the task from UI
       addOptimisticUpdate({ type: 'delete', taskId })
@@ -256,7 +290,7 @@ export default function Pipeline({ initialTasks, projectId }: PipelineProps) {
     }
   }
 
-  const taskCount = (columnId: string) => 
+  const taskCount = (columnId: string) =>
     optimisticTasks.filter(t => t.column === columnId).length
 
   return (
@@ -270,21 +304,21 @@ export default function Pipeline({ initialTasks, projectId }: PipelineProps) {
           <KanbanBoard
             id={column.id}
             key={column.id}
-            className={`max-h-[600px] ${isPending ? 'opacity-70' : ''}`}
+            className={`max-h-[450px] sm:max-h-[600px] ${isPending ? 'opacity-70' : ''}`}
           >
             <KanbanHeader>
-              <div className="flex items-center gap-2">
+              <div className='flex items-center gap-2'>
                 {/* Notion-style colored pill badge */}
                 <span
-                  className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium"
-                  style={{ 
-                    backgroundColor: column.bgColor, 
-                    color: column.color 
+                  className='inline-flex items-center rounded px-2 py-0.5 text-xs font-medium'
+                  style={{
+                    backgroundColor: column.bgColor,
+                    color: column.color,
                   }}
                 >
                   {column.name}
                 </span>
-                <span className="text-muted-foreground text-xs">
+                <span className='text-muted-foreground text-xs'>
                   {taskCount(column.id)}
                 </span>
               </div>
@@ -309,17 +343,17 @@ export default function Pipeline({ initialTasks, projectId }: PipelineProps) {
                     key={task.id}
                     name={task.name}
                   >
-                    <div className="flex flex-col gap-3">
+                    <div className='flex flex-col gap-3'>
                       {/* Title */}
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="m-0 flex-1 font-medium leading-snug">
+                      <div className='flex items-start justify-between gap-2'>
+                        <p className='m-0 flex-1 leading-snug font-medium'>
                           {task.name}
                         </p>
-                        <div className="flex items-center gap-0.5 -mt-1 -mr-1 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 [[data-dragging]_&]:opacity-100">
+                        <div className='-mt-1 -mr-1 flex shrink-0 items-center gap-0.5 transition-opacity in-data-dragging:opacity-100 md:opacity-0 md:group-hover:opacity-100'>
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-muted-foreground hover:text-foreground h-6 w-6"
+                            variant='ghost'
+                            size='icon'
+                            className='text-muted-foreground hover:text-foreground h-6 w-6'
                             onClick={e => {
                               e.stopPropagation()
                               e.preventDefault()
@@ -328,36 +362,36 @@ export default function Pipeline({ initialTasks, projectId }: PipelineProps) {
                             onPointerDown={e => e.stopPropagation()}
                             onMouseDown={e => e.stopPropagation()}
                           >
-                            <Pencil className="h-3.5 w-3.5" />
-                            <span className="sr-only">Edit task</span>
+                            <Pencil className='h-3.5 w-3.5' />
+                            <span className='sr-only'>Edit task</span>
                           </Button>
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-muted-foreground hover:text-destructive h-6 w-6"
+                            variant='ghost'
+                            size='icon'
+                            className='text-muted-foreground hover:text-destructive h-6 w-6'
                             onClick={e => {
                               e.stopPropagation()
                               e.preventDefault()
-                              handleDelete(task.id)
+                              handleDeleteClick(task)
                             }}
                             onPointerDown={e => e.stopPropagation()}
                             onMouseDown={e => e.stopPropagation()}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            <span className="sr-only">Delete task</span>
+                            <Trash2 className='h-3.5 w-3.5' />
+                            <span className='sr-only'>Delete task</span>
                           </Button>
                         </div>
                       </div>
 
                       {/* Assignee on left, date on right */}
-                      <div className="flex items-center justify-between text-muted-foreground text-xs">
+                      <div className='text-muted-foreground flex items-center justify-between text-xs'>
                         {task.assignee ? (
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-5 w-5">
+                          <div className='flex items-center gap-2'>
+                            <Avatar className='h-5 w-5'>
                               <AvatarImage
                                 src={task.assignee.imageUrl ?? undefined}
                               />
-                              <AvatarFallback className="text-[9px]">
+                              <AvatarFallback className='text-[9px]'>
                                 {assigneeInitials.toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
@@ -367,10 +401,13 @@ export default function Pipeline({ initialTasks, projectId }: PipelineProps) {
                           <div />
                         )}
                         <span>
-                          {new Date(task.createdAt).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                          })}
+                          {new Date(task.createdAt).toLocaleDateString(
+                            'en-US',
+                            {
+                              month: 'short',
+                              day: 'numeric',
+                            }
+                          )}
                         </span>
                       </div>
                     </div>
@@ -379,8 +416,11 @@ export default function Pipeline({ initialTasks, projectId }: PipelineProps) {
               }}
             </KanbanCards>
             {/* New task button at bottom of column */}
-            <div className="px-1 pb-2">
-              <InlineCreateTask projectId={projectId} status={column.id as TaskStatus} />
+            <div className='px-1 pb-2'>
+              <InlineCreateTask
+                projectId={projectId}
+                status={column.id as TaskStatus}
+              />
             </div>
           </KanbanBoard>
         )}
@@ -391,6 +431,31 @@ export default function Pipeline({ initialTasks, projectId }: PipelineProps) {
         onOpenChange={setIsEditDialogOpen}
         task={editingTask}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className='sm:max-w-[425px]'>
+          <DialogHeader>
+            <DialogTitle>Delete Task</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete &ldquo;{deletingTask?.name}
+              &rdquo;? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => setIsDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant='destructive' onClick={confirmDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
