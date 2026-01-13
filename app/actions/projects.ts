@@ -41,21 +41,18 @@ export async function createProject(
     }
 
     // Check if user has Pro plan - gate multiple projects behind billing
-    // Note: Clerk Billing is in beta, so this check may need adjustment
-    // based on your Clerk Dashboard plan configuration
     const hasPro = has?.({ plan: 'pro' })
 
     if (!hasPro) {
-      // Check if org already has a non-default project
-      const existingProjects = await db.project.count({
-        where: { orgId, isDefault: false },
+      // Free tier: max 1 project
+      const projectCount = await db.project.count({
+        where: { orgId },
       })
 
-      if (existingProjects > 0) {
+      if (projectCount >= 1) {
         return {
           success: false,
-          error:
-            'Upgrade to Pro to create multiple projects. Free tier includes one default project.',
+          error: 'Upgrade to Pro to create multiple projects.',
         }
       }
     }
@@ -64,7 +61,6 @@ export async function createProject(
       data: {
         name,
         orgId,
-        isDefault: false,
       },
     })
 
@@ -94,8 +90,13 @@ export async function deleteProject(
       return { success: false, error: 'Project not found' }
     }
 
-    if (project.isDefault) {
-      return { success: false, error: 'Cannot delete the default project' }
+    // Prevent deleting the last project
+    const projectCount = await db.project.count({
+      where: { orgId },
+    })
+
+    if (projectCount <= 1) {
+      return { success: false, error: 'Cannot delete your only project' }
     }
 
     // Delete all tasks in the project first

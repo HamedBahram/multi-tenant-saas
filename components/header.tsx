@@ -23,13 +23,13 @@ export default async function Header() {
 
           {!hasPro && (
             <SignedIn>
-              <Button asChild variant='ghost' size='sm'>
+              <Button asChild variant='ghost' size='sm' className='ml-auto'>
                 <Link href='/pricing'>✨ Upgrade to Pro</Link>
               </Button>
             </SignedIn>
           )}
 
-          <div className='flex items-center gap-4'>
+          <div className='ml-auto flex items-center gap-4'>
             <ThemeToggle />
             <SignedOut>
               <SignInButton>

@@ -34,7 +34,6 @@ model Project {
   id        String   @id @default(cuid())
   name      String
   orgId     String
-  isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   tasks     Task[]

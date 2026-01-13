@@ -6,26 +6,22 @@ import { Button } from '@/components/ui/button'
 import { Kanban, Users, Zap, ArrowRight } from 'lucide-react'
 
 async function getDataForOrg(orgId: string) {
-  // Get or create default project
-  let defaultProject = await db.project.findFirst({
-    where: { orgId, isDefault: true },
-  })
-
-  if (!defaultProject) {
-    defaultProject = await db.project.create({
-      data: {
-        name: 'Default Project',
-        orgId,
-        isDefault: true,
-      },
-    })
-  }
-
   // Get all projects for this org
-  const projects = await db.project.findMany({
+  let projects = await db.project.findMany({
     where: { orgId },
     orderBy: { createdAt: 'asc' },
   })
+
+  // Auto-create first project if none exist (onboarding)
+  if (projects.length === 0) {
+    const newProject = await db.project.create({
+      data: {
+        name: 'My Project',
+        orgId,
+      },
+    })
+    projects = [newProject]
+  }
 
   // Get all tasks for this org (all projects)
   const tasks = await db.task.findMany({
@@ -34,7 +30,7 @@ async function getDataForOrg(orgId: string) {
     include: { assignee: true },
   })
 
-  return { projects, tasks, defaultProjectId: defaultProject.id }
+  return { projects, tasks, defaultProjectId: projects[0].id }
 }
 
 export default async function Home() {
@@ -51,7 +47,7 @@ export default async function Home() {
   return (
     <>
       <SignedOut>
-        <section className='relative -z-10 flex min-h-[calc(100vh-6rem)] items-center justify-center overflow-hidden'>
+        <section className='pointer-events-none relative flex min-h-[calc(100vh-6rem)] items-center justify-center overflow-hidden'>
           {/* Background decoration */}
           <div className='absolute inset-0 -z-20'>
             <div className='bg-primary/5 absolute top-1/4 left-1/4 h-96 w-96 rounded-full blur-3xl' />
@@ -59,7 +55,7 @@ export default async function Home() {
             <div className='from-chart-2/5 absolute top-1/2 left-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-linear-to-br to-transparent blur-3xl' />
           </div>
 
-          <div className='container max-w-4xl px-6 text-center'>
+          <div className='pointer-events-auto container max-w-4xl px-6 text-center'>
             {/* Badge */}
             <div className='bg-primary/10 text-primary animate-fade-in mb-8 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium'>
               <Zap className='size-4' />

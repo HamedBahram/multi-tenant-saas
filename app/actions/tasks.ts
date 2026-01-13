@@ -17,17 +17,17 @@ async function getOrgIdOrThrow() {
   return orgId
 }
 
-async function getOrCreateDefaultProject(orgId: string) {
+async function getOrCreateFirstProject(orgId: string) {
   let project = await db.project.findFirst({
-    where: { orgId, isDefault: true },
+    where: { orgId },
+    orderBy: { createdAt: 'asc' },
   })
 
   if (!project) {
     project = await db.project.create({
       data: {
-        name: 'Default Project',
+        name: 'My Project',
         orgId,
-        isDefault: true,
       },
     })
   }
@@ -44,11 +44,11 @@ export async function createTask(
     const orgId = await getOrgIdOrThrow()
     const user = await currentUser()
 
-    // If no projectId provided, use the default project
+    // If no projectId provided, use the first project
     let targetProjectId = projectId
     if (!targetProjectId) {
-      const defaultProject = await getOrCreateDefaultProject(orgId)
-      targetProjectId = defaultProject.id
+      const firstProject = await getOrCreateFirstProject(orgId)
+      targetProjectId = firstProject.id
     }
 
     // Ensure the user exists in our database (upsert)
@@ -200,16 +200,17 @@ export async function deleteTask(taskId: string): Promise<ActionResult> {
 export async function getTasks(projectId?: string) {
   const orgId = await getOrgIdOrThrow()
 
-  // If no projectId, get tasks from the default project
+  // If no projectId, get tasks from the first project
   let targetProjectId = projectId
   if (!targetProjectId) {
-    const defaultProject = await db.project.findFirst({
-      where: { orgId, isDefault: true },
+    const firstProject = await db.project.findFirst({
+      where: { orgId },
+      orderBy: { createdAt: 'asc' },
     })
-    if (!defaultProject) {
+    if (!firstProject) {
       return []
     }
-    targetProjectId = defaultProject.id
+    targetProjectId = firstProject.id
   }
 
   const tasks = await db.task.findMany({

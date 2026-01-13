@@ -26,7 +26,6 @@ import Link from 'next/link'
 interface Project {
   id: string
   name: string
-  isDefault: boolean
 }
 
 interface ProjectSelectorProps {
@@ -94,11 +93,6 @@ export function ProjectSelector({
             >
               <Folder className='mr-2 h-4 w-4' />
               {project.name}
-              {project.isDefault && (
-                <span className='text-muted-foreground ml-auto text-xs'>
-                  Default
-                </span>
-              )}
             </DropdownMenuItem>
           ))}
           <DropdownMenuSeparator />
