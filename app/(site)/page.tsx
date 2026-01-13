@@ -126,7 +126,7 @@ export default async function Home() {
       <SignedIn>
         <section className='py-32'>
           <div className='container max-w-7xl'>
-            <h1 className='text-3xl font-semibold'>Task tracker</h1>
+            {/* <h1 className='text-3xl font-semibold'>Task tracker</h1> */}
 
             {!orgId ? (
               <p className='text-muted-foreground mt-4'>
