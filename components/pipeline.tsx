@@ -54,7 +54,8 @@ const columns = [
 
 type TaskItem = {
   id: string
-  name: string
+  title: string
+  description: string | null
   column: string
   status: TaskStatus
   order: number
@@ -113,19 +114,26 @@ function InlineCreateTask({
   onTaskCreated?: () => void
 }) {
   const [open, setOpen] = useState(false)
-  const [taskName, setTaskName] = useState('')
+  const [taskTitle, setTaskTitle] = useState('')
+  const [taskDescription, setTaskDescription] = useState('')
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!taskName.trim()) return
+    if (!taskTitle.trim()) return
 
     setError(null)
     startTransition(async () => {
-      const result = await createTask(taskName.trim(), projectId, status)
+      const result = await createTask(
+        taskTitle.trim(),
+        taskDescription.trim() || undefined,
+        projectId,
+        status
+      )
       if (result.success) {
-        setTaskName('')
+        setTaskTitle('')
+        setTaskDescription('')
         setOpen(false)
         onTaskCreated?.()
       } else {
@@ -155,14 +163,26 @@ function InlineCreateTask({
             </DialogHeader>
             <div className='grid gap-4 py-4'>
               <div className='grid gap-2'>
-                <Label htmlFor='inline-task-name'>Task Name</Label>
+                <Label htmlFor='inline-task-title'>Title</Label>
                 <Input
-                  id='inline-task-name'
-                  placeholder='Enter task name...'
-                  value={taskName}
-                  onChange={e => setTaskName(e.target.value)}
+                  id='inline-task-title'
+                  placeholder='Enter task title...'
+                  value={taskTitle}
+                  onChange={e => setTaskTitle(e.target.value)}
                   disabled={isPending}
                   autoFocus
+                />
+              </div>
+              <div className='grid gap-2'>
+                <Label htmlFor='inline-task-description'>Description (optional)</Label>
+                <textarea
+                  id='inline-task-description'
+                  placeholder='Enter task description...'
+                  value={taskDescription}
+                  onChange={e => setTaskDescription(e.target.value)}
+                  disabled={isPending}
+                  rows={3}
+                  className='border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-[80px] w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50'
                 />
               </div>
               {error && <p className='text-sm text-red-500'>{error}</p>}
@@ -176,7 +196,7 @@ function InlineCreateTask({
               >
                 Cancel
               </Button>
-              <Button type='submit' disabled={isPending || !taskName.trim()}>
+              <Button type='submit' disabled={isPending || !taskTitle.trim()}>
                 {isPending ? 'Creating...' : 'Create Task'}
               </Button>
             </DialogFooter>
@@ -195,19 +215,21 @@ export default function Pipeline({
   const [isPending, startTransition] = useTransition()
   const [editingTask, setEditingTask] = useState<{
     id: string
-    name: string
+    title: string
+    description: string | null
   } | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [deletingTask, setDeletingTask] = useState<{
     id: string
-    name: string
+    title: string
   } | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
 
   // Transform tasks to include column field for kanban compatibility
   const transformedTasks: TaskItem[] = initialTasks.map(task => ({
     id: task.id,
-    name: task.name,
+    title: task.title,
+    description: task.description,
     column: task.status,
     status: task.status,
     order: task.order,
@@ -223,12 +245,12 @@ export default function Pipeline({
   )
 
   const handleEdit = (task: TaskItem) => {
-    setEditingTask({ id: task.id, name: task.name })
+    setEditingTask({ id: task.id, title: task.title, description: task.description })
     setIsEditDialogOpen(true)
   }
 
   const handleDeleteClick = (task: TaskItem) => {
-    setDeletingTask({ id: task.id, name: task.name })
+    setDeletingTask({ id: task.id, title: task.title })
     setIsDeleteDialogOpen(true)
   }
 
@@ -356,13 +378,13 @@ export default function Pipeline({
                     column={column.id}
                     id={task.id}
                     key={task.id}
-                    name={task.name}
+                    title={task.title}
                   >
-                    <div className='flex flex-col gap-3'>
+                    <div className='flex flex-col gap-2'>
                       {/* Title */}
                       <div className='flex items-start justify-between gap-2'>
                         <p className='m-0 flex-1 leading-snug font-medium'>
-                          {task.name}
+                          {task.title}
                         </p>
                         <div className='-mt-1 -mr-1 flex shrink-0 items-center gap-0.5 transition-opacity in-data-dragging:opacity-100 md:opacity-0 md:group-hover:opacity-100'>
                           <Button
@@ -397,6 +419,13 @@ export default function Pipeline({
                           </Button>
                         </div>
                       </div>
+
+                      {/* Description */}
+                      {task.description && (
+                        <p className='text-muted-foreground m-0 line-clamp-2 text-xs'>
+                          {task.description}
+                        </p>
+                      )}
 
                       {/* Assignee on left, date on right */}
                       <div className='text-muted-foreground flex items-center justify-between text-xs'>
@@ -454,7 +483,7 @@ export default function Pipeline({
           <DialogHeader>
             <DialogTitle>Delete Task</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &ldquo;{deletingTask?.name}
+              Are you sure you want to delete &ldquo;{deletingTask?.title}
               &rdquo;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>

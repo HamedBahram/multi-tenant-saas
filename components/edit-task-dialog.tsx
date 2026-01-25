@@ -19,7 +19,8 @@ interface EditTaskDialogProps {
   onOpenChange: (open: boolean) => void
   task: {
     id: string
-    name: string
+    title: string
+    description: string | null
   } | null
   onTaskUpdated?: () => void
 }
@@ -30,25 +31,30 @@ export function EditTaskDialog({
   task,
   onTaskUpdated,
 }: EditTaskDialogProps) {
-  const [taskName, setTaskName] = useState('')
+  const [taskTitle, setTaskTitle] = useState('')
+  const [taskDescription, setTaskDescription] = useState('')
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
-  // Sync task name when dialog opens with a new task
+  // Sync task fields when dialog opens with a new task
   useEffect(() => {
     if (task) {
-      setTaskName(task.name)
+      setTaskTitle(task.title)
+      setTaskDescription(task.description || '')
       setError(null)
     }
   }, [task])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!taskName.trim() || !task) return
+    if (!taskTitle.trim() || !task) return
 
     setError(null)
     startTransition(async () => {
-      const result = await updateTask(task.id, { name: taskName.trim() })
+      const result = await updateTask(task.id, {
+        title: taskTitle.trim(),
+        description: taskDescription.trim() || undefined,
+      })
       if (result.success) {
         onOpenChange(false)
         onTaskUpdated?.()
@@ -65,19 +71,31 @@ export function EditTaskDialog({
           <DialogHeader>
             <DialogTitle>Edit Task</DialogTitle>
             <DialogDescription>
-              Update the task name below.
+              Update the task details below.
             </DialogDescription>
           </DialogHeader>
           <div className='grid gap-4 py-4'>
             <div className='grid gap-2'>
-              <Label htmlFor='edit-task-name'>Task Name</Label>
+              <Label htmlFor='edit-task-title'>Title</Label>
               <Input
-                id='edit-task-name'
-                placeholder='Enter task name...'
-                value={taskName}
-                onChange={e => setTaskName(e.target.value)}
+                id='edit-task-title'
+                placeholder='Enter task title...'
+                value={taskTitle}
+                onChange={e => setTaskTitle(e.target.value)}
                 disabled={isPending}
                 autoFocus
+              />
+            </div>
+            <div className='grid gap-2'>
+              <Label htmlFor='edit-task-description'>Description (optional)</Label>
+              <textarea
+                id='edit-task-description'
+                placeholder='Enter task description...'
+                value={taskDescription}
+                onChange={e => setTaskDescription(e.target.value)}
+                disabled={isPending}
+                rows={3}
+                className='border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-[80px] w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50'
               />
             </div>
             {error && <p className='text-sm text-red-500'>{error}</p>}
@@ -91,7 +109,7 @@ export function EditTaskDialog({
             >
               Cancel
             </Button>
-            <Button type='submit' disabled={isPending || !taskName.trim()}>
+            <Button type='submit' disabled={isPending || !taskTitle.trim()}>
               {isPending ? 'Saving...' : 'Save Changes'}
             </Button>
           </DialogFooter>

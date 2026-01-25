@@ -252,7 +252,7 @@ export default async function DashboardPage() {
                             </Avatar>
                           )}
                           <div className='min-w-0'>
-                            <p className='truncate font-medium'>{task.name}</p>
+                            <p className='truncate font-medium'>{task.title}</p>
                             <p className='text-muted-foreground truncate text-xs'>
                               {task.project.name}
                               {assigneeName && ` • ${assigneeName}`}

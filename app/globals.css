@@ -79,7 +79,7 @@
   /* Kanban status colors - Notion-inspired */
   --kanban-planned: #787774;
   --kanban-planned-bg: rgba(120, 119, 116, 0.15);
-  --kanban-progress: #C4841D;
+  --kanban-progress: #c4841d;
   --kanban-progress-bg: rgba(196, 132, 29, 0.15);
   --kanban-done: #448361;
   --kanban-done-bg: rgba(68, 131, 97, 0.15);
@@ -118,11 +118,11 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
   /* Kanban status colors - Notion-inspired (dark mode) */
-  --kanban-planned: #9B9A97;
+  --kanban-planned: #9b9a97;
   --kanban-planned-bg: rgba(155, 154, 151, 0.15);
-  --kanban-progress: #D9A459;
+  --kanban-progress: #d9a459;
   --kanban-progress-bg: rgba(217, 164, 89, 0.15);
-  --kanban-done: #6C9B7D;
+  --kanban-done: #6c9b7d;
   --kanban-done-bg: rgba(108, 155, 125, 0.15);
 }
 

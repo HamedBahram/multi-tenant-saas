@@ -36,7 +36,8 @@ async function getOrCreateFirstProject(orgId: string) {
 }
 
 export async function createTask(
-  name: string,
+  title: string,
+  description?: string,
   projectId?: string,
   status: TaskStatus = 'PLANNED'
 ): Promise<ActionResult<{ id: string }>> {
@@ -79,7 +80,8 @@ export async function createTask(
 
     const task = await db.task.create({
       data: {
-        name,
+        title,
+        description: description || null,
         orgId,
         projectId: targetProjectId,
         assigneeId: user?.id,
@@ -199,7 +201,7 @@ export async function deleteTask(taskId: string): Promise<ActionResult> {
 
 export async function updateTask(
   taskId: string,
-  data: { name?: string }
+  data: { title?: string; description?: string }
 ): Promise<ActionResult> {
   try {
     const orgId = await getOrgIdOrThrow()
@@ -216,7 +218,8 @@ export async function updateTask(
     await db.task.update({
       where: { id: taskId },
       data: {
-        ...(data.name !== undefined && { name: data.name }),
+        ...(data.title !== undefined && { title: data.title }),
+        ...(data.description !== undefined && { description: data.description }),
       },
     })
 

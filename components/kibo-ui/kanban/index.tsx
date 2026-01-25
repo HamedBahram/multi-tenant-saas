@@ -38,7 +38,7 @@ export type { DragEndEvent } from "@dnd-kit/core";
 
 type KanbanItemProps = {
   id: string;
-  name: string;
+  title: string;
   column: string;
 } & Record<string, unknown>;
 
@@ -94,7 +94,7 @@ export type KanbanCardProps<T extends KanbanItemProps = KanbanItemProps> = T & {
 
 export const KanbanCard = <T extends KanbanItemProps = KanbanItemProps>({
   id,
-  name,
+  title,
   children,
   className,
 }: KanbanCardProps<T>) => {
@@ -125,7 +125,7 @@ export const KanbanCard = <T extends KanbanItemProps = KanbanItemProps>({
             className
           )}
         >
-          {children ?? <p className="m-0 font-medium text-sm">{name}</p>}
+          {children ?? <p className="m-0 font-medium text-sm">{title}</p>}
         </div>
       </div>
       {activeCardId === id && (
@@ -137,7 +137,7 @@ export const KanbanCard = <T extends KanbanItemProps = KanbanItemProps>({
               className
             )}
           >
-            {children ?? <p className="m-0 font-medium text-sm">{name}</p>}
+            {children ?? <p className="m-0 font-medium text-sm">{title}</p>}
           </div>
         </t.In>
       )}
@@ -291,26 +291,26 @@ export const KanbanProvider = <
 
   const announcements: Announcements = {
     onDragStart({ active }) {
-      const { name, column } = data.find((item) => item.id === active.id) ?? {};
+      const { title, column } = data.find((item) => item.id === active.id) ?? {};
 
-      return `Picked up the card "${name}" from the "${column}" column`;
+      return `Picked up the card "${title}" from the "${column}" column`;
     },
     onDragOver({ active, over }) {
-      const { name } = data.find((item) => item.id === active.id) ?? {};
+      const { title } = data.find((item) => item.id === active.id) ?? {};
       const newColumn = columns.find((column) => column.id === over?.id)?.name;
 
-      return `Dragged the card "${name}" over the "${newColumn}" column`;
+      return `Dragged the card "${title}" over the "${newColumn}" column`;
     },
     onDragEnd({ active, over }) {
-      const { name } = data.find((item) => item.id === active.id) ?? {};
+      const { title } = data.find((item) => item.id === active.id) ?? {};
       const newColumn = columns.find((column) => column.id === over?.id)?.name;
 
-      return `Dropped the card "${name}" into the "${newColumn}" column`;
+      return `Dropped the card "${title}" into the "${newColumn}" column`;
     },
     onDragCancel({ active }) {
-      const { name } = data.find((item) => item.id === active.id) ?? {};
+      const { title } = data.find((item) => item.id === active.id) ?? {};
 
-      return `Cancelled dragging the card "${name}"`;
+      return `Cancelled dragging the card "${title}"`;
     },
   };
 
