@@ -30,7 +30,7 @@ interface Project {
 
 interface ProjectSelectorProps {
   projects: Project[]
-  currentProjectId: string
+  currentProjectId?: string
   onProjectChange: (projectId: string) => void
   hasPro: boolean
 }

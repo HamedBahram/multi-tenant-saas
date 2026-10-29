@@ -140,7 +140,10 @@ export default async function Home() {
               </p>
             ) : (
               <div className='mt-6'>
+                {/* Remount per org so client state never carries across orgs */}
                 <TaskBoard
+                  key={orgId}
+                  orgId={orgId}
                   initialTasks={data.tasks}
                   initialProjects={data.projects}
                   defaultProjectId={data.defaultProjectId}

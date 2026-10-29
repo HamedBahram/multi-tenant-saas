@@ -146,7 +146,8 @@ function InlineCreateTask({
     <>
       <button
         onClick={() => setOpen(true)}
-        className='text-muted-foreground hover:bg-accent/50 hover:text-foreground flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm transition-colors'
+        disabled={!projectId}
+        className='text-muted-foreground hover:bg-accent/50 hover:text-foreground flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm transition-colors disabled:pointer-events-none disabled:opacity-50'
       >
         <Plus className='h-4 w-4' />
         <span>New</span>

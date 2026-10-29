@@ -54,12 +54,13 @@ export function useTasks(
   }
 }
 
-export function useAllTasks(options: UseTasksOptions = {}) {
+export function useAllTasks(orgId: string, options: UseTasksOptions = {}) {
   const { refreshInterval = 3000, fallbackData } = options
 
+  // Key the cache by org so switching orgs never serves another org's tasks
   const { data, error, isLoading, isValidating, mutate } = useSWR<
     TaskWithAssignee[]
-  >('/api/tasks', fetcher, {
+  >(['/api/tasks', orgId], ([url]: [string, string]) => fetcher(url), {
     refreshInterval,
     fallbackData,
     revalidateOnFocus: true,

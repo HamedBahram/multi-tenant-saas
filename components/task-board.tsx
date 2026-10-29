@@ -9,6 +9,7 @@ import type { Project } from '@/lib/generated/prisma/client'
 import type { TaskWithAssignee } from '@/app/actions/tasks'
 
 interface TaskBoardProps {
+  orgId: string
   initialTasks: TaskWithAssignee[]
   initialProjects: Project[]
   defaultProjectId: string
@@ -16,16 +17,24 @@ interface TaskBoardProps {
 }
 
 export function TaskBoard({
+  orgId,
   initialTasks,
   initialProjects,
   defaultProjectId,
   hasPro,
 }: TaskBoardProps) {
-  const [currentProjectId, setCurrentProjectId] = useState(defaultProjectId)
+  const [selectedProjectId, setSelectedProjectId] = useState(defaultProjectId)
+
+  // Fall back to the first project if the selected one no longer exists
+  const currentProjectId = initialProjects.some(
+    project => project.id === selectedProjectId
+  )
+    ? selectedProjectId
+    : initialProjects[0]?.id
 
   // Use SWR for realtime task updates with polling
   // Initial data from server is used as fallback until first fetch completes
-  const { tasks, isValidating, mutate } = useAllTasks({
+  const { tasks, isValidating, mutate } = useAllTasks(orgId, {
     refreshInterval: 3000, // Poll every 3 seconds for updates from other users
     fallbackData: initialTasks,
   })
@@ -36,7 +45,7 @@ export function TaskBoard({
   )
 
   const handleProjectChange = useCallback((projectId: string) => {
-    setCurrentProjectId(projectId)
+    setSelectedProjectId(projectId)
   }, [])
 
   return (
