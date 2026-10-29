@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import Providers from '@/components/providers'
 import { ClerkProvider } from '@clerk/nextjs'
-import { shadcn } from '@clerk/themes'
+import { shadcn } from '@clerk/ui/themes'
 import './globals.css'
 
 const geistSans = Geist({
@@ -26,18 +26,18 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <ClerkProvider
-      appearance={{
-        theme: shadcn,
-      }}
-    >
-      <html lang='en' suppressHydrationWarning>
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+    <html lang='en' suppressHydrationWarning>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <ClerkProvider
+          appearance={{
+            theme: shadcn,
+          }}
         >
           <Providers>{children}</Providers>
-        </body>
-      </html>
-    </ClerkProvider>
+        </ClerkProvider>
+      </body>
+    </html>
   )
 }

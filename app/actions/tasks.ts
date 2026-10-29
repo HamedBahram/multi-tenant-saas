@@ -50,6 +50,14 @@ export async function createTask(
     if (!targetProjectId) {
       const firstProject = await getOrCreateFirstProject(orgId)
       targetProjectId = firstProject.id
+    } else {
+      // Never trust a client-supplied project: it must belong to the active org
+      const project = await db.project.findFirst({
+        where: { id: targetProjectId, orgId },
+      })
+      if (!project) {
+        return { success: false, error: 'Project not found' }
+      }
     }
 
     // Ensure the user exists in our database (upsert)
@@ -57,14 +65,14 @@ export async function createTask(
       await db.user.upsert({
         where: { id: user.id },
         update: {
-          email: user.emailAddresses[0]?.emailAddress,
+          email: user.primaryEmailAddress?.emailAddress,
           firstName: user.firstName,
           lastName: user.lastName,
           imageUrl: user.imageUrl,
         },
         create: {
           id: user.id,
-          email: user.emailAddresses[0]?.emailAddress,
+          email: user.primaryEmailAddress?.emailAddress,
           firstName: user.firstName,
           lastName: user.lastName,
           imageUrl: user.imageUrl,

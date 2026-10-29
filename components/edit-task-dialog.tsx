@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -31,19 +31,23 @@ export function EditTaskDialog({
   task,
   onTaskUpdated,
 }: EditTaskDialogProps) {
-  const [taskTitle, setTaskTitle] = useState('')
-  const [taskDescription, setTaskDescription] = useState('')
+  const [taskTitle, setTaskTitle] = useState(task?.title ?? '')
+  const [taskDescription, setTaskDescription] = useState(
+    task?.description ?? ''
+  )
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
-  // Sync task fields when dialog opens with a new task
-  useEffect(() => {
+  // Reset task fields when dialog opens with a new task
+  const [syncedTask, setSyncedTask] = useState(task)
+  if (task !== syncedTask) {
+    setSyncedTask(task)
     if (task) {
       setTaskTitle(task.title)
       setTaskDescription(task.description || '')
       setError(null)
     }
-  }, [task])
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

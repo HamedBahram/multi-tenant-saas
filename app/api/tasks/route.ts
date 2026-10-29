@@ -4,12 +4,16 @@ import { db } from '@/lib/db'
 
 export async function GET(request: Request) {
   try {
-    const { orgId } = await auth()
+    const { isAuthenticated, orgId } = await auth()
+
+    if (!isAuthenticated) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
 
     if (!orgId) {
       return NextResponse.json(
         { error: 'You must be in an organization to fetch tasks' },
-        { status: 401 }
+        { status: 403 }
       )
     }
 
@@ -17,9 +21,7 @@ export async function GET(request: Request) {
     const projectId = searchParams.get('projectId')
 
     // If no projectId, get all tasks for the org
-    const whereClause = projectId
-      ? { orgId, projectId }
-      : { orgId }
+    const whereClause = projectId ? { orgId, projectId } : { orgId }
 
     const tasks = await db.task.findMany({
       where: whereClause,

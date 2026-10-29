@@ -1,5 +1,5 @@
 import { auth } from '@clerk/nextjs/server'
-import { SignedIn, SignedOut, SignInButton } from '@clerk/nextjs'
+import { Show, SignInButton } from '@clerk/nextjs'
 import { TaskBoard } from '@/components/task-board'
 import { db } from '@/lib/db'
 import { Button } from '@/components/ui/button'
@@ -46,7 +46,7 @@ export default async function Home() {
 
   return (
     <>
-      <SignedOut>
+      <Show when='signed-out'>
         <section className='pointer-events-none relative flex min-h-[calc(100vh-5rem)] items-center justify-center overflow-hidden sm:min-h-[calc(100vh-6rem)]'>
           {/* Background decoration */}
           <div className='absolute inset-0 -z-20 overflow-hidden'>
@@ -127,9 +127,9 @@ export default async function Home() {
             </div>
           </div>
         </section>
-      </SignedOut>
+      </Show>
 
-      <SignedIn>
+      <Show when='signed-in'>
         <section className='pt-24 pb-8 sm:py-32'>
           <div className='container max-w-7xl'>
             {/* <h1 className='text-3xl font-semibold'>Task tracker</h1> */}
@@ -150,7 +150,7 @@ export default async function Home() {
             )}
           </div>
         </section>
-      </SignedIn>
+      </Show>
     </>
   )
 }

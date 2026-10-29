@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { auth } from '@clerk/nextjs/server'
 import { OrganizationSwitcher } from '@clerk/nextjs'
-import { SignedIn, SignedOut, SignInButton } from '@clerk/nextjs'
+import { Show, SignInButton } from '@clerk/nextjs'
 
 import Logo from '@/components/logo'
 import { Button } from '@/components/ui/button'
@@ -20,21 +20,21 @@ export default async function Header() {
         <div className='flex items-center justify-between'>
           <div className='flex items-center gap-2 sm:gap-4'>
             <Logo />
-            <SignedIn>
+            <Show when='signed-in'>
               <OrganizationSwitcher />
-            </SignedIn>
+            </Show>
           </div>
 
           <div className='flex items-center gap-2 sm:gap-4'>
             {!hasPro && (
-              <SignedIn>
+              <Show when='signed-in'>
                 <Button asChild variant='ghost' size='sm'>
                   <Link href='/pricing'>✨ Upgrade</Link>
                 </Button>
-              </SignedIn>
+              </Show>
             )}
             <ThemeToggle />
-            <SignedOut>
+            <Show when='signed-out'>
               <SignInButton>
                 <Button
                   size='sm'
@@ -49,10 +49,10 @@ export default async function Header() {
                   <LogIn className='size-4' />
                 </Button>
               </SignInButton>
-            </SignedOut>
-            <SignedIn>
+            </Show>
+            <Show when='signed-in'>
               <ClerkUserButton />
-            </SignedIn>
+            </Show>
           </div>
         </div>
       </div>

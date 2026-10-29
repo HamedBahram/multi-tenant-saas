@@ -21,7 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 
 export default async function DashboardPage() {
-  const { orgId } = await auth()
+  const { orgId } = await auth.protect()
 
   if (!orgId) {
     redirect('/')

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import Pipeline from '@/components/pipeline'
 import { CreateTaskDialog } from '@/components/create-task-dialog'
 import { ProjectSelector } from '@/components/project-selector'
@@ -22,7 +22,6 @@ export function TaskBoard({
   hasPro,
 }: TaskBoardProps) {
   const [currentProjectId, setCurrentProjectId] = useState(defaultProjectId)
-  const [projects, setProjects] = useState(initialProjects)
 
   // Use SWR for realtime task updates with polling
   // Initial data from server is used as fallback until first fetch completes
@@ -40,16 +39,11 @@ export function TaskBoard({
     setCurrentProjectId(projectId)
   }, [])
 
-  // Update projects when they change from server
-  useEffect(() => {
-    setProjects(initialProjects)
-  }, [initialProjects])
-
   return (
     <div className='space-y-4 sm:space-y-6'>
       <div className='flex items-center justify-between gap-3'>
         <ProjectSelector
-          projects={projects}
+          projects={initialProjects}
           currentProjectId={currentProjectId}
           onProjectChange={handleProjectChange}
           hasPro={hasPro}
