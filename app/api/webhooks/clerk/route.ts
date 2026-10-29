@@ -1,3 +1,5 @@
+import { clerkClient } from '@clerk/nextjs/server'
+import { isClerkAPIResponseError } from '@clerk/nextjs/errors'
 import { verifyWebhook } from '@clerk/nextjs/webhooks'
 import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
@@ -61,6 +63,46 @@ export async function POST(req: NextRequest) {
         })
 
       console.log(`User ${id} deleted`)
+    }
+  }
+
+  if (eventType === 'organizationMembership.deleted') {
+    // Clerk keeps an org after its last member is gone (e.g. the user was
+    // deleted), so delete it ourselves, which fires organization.deleted
+    const organizationId = evt.data.organization.id
+    const clerk = await clerkClient()
+
+    try {
+      const org = await clerk.organizations.getOrganization({
+        organizationId,
+        includeMembersCount: true,
+      })
+
+      if (org.membersCount === 0) {
+        await clerk.organizations.deleteOrganization(organizationId)
+        console.log(`Organization ${organizationId} has no members, deleted`)
+      }
+    } catch (err) {
+      // The org itself was deleted, which also removes its memberships
+      if (isClerkAPIResponseError(err) && err.status === 404) {
+        console.log(`Organization ${organizationId} not found, skipping`)
+      } else {
+        throw err
+      }
+    }
+  }
+
+  if (eventType === 'organization.deleted') {
+    const { id } = evt.data
+
+    if (id) {
+      // Projects and tasks belong to the org, so they go with it
+      await db.$transaction([
+        db.task.deleteMany({ where: { orgId: id } }),
+        db.project.deleteMany({ where: { orgId: id } }),
+      ])
+
+      console.log(`Organization ${id} projects and tasks deleted`)
     }
   }
 
