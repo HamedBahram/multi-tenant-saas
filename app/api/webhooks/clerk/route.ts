@@ -4,6 +4,18 @@ import { verifyWebhook } from '@clerk/nextjs/webhooks'
 import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 
+async function userExists(userId: string) {
+  const clerk = await clerkClient()
+
+  try {
+    await clerk.users.getUser(userId)
+    return true
+  } catch (err) {
+    if (isClerkAPIResponseError(err) && err.status === 404) return false
+    throw err
+  }
+}
+
 export async function POST(req: NextRequest) {
   let evt
 
@@ -21,6 +33,13 @@ export async function POST(req: NextRequest) {
 
   if (eventType === 'user.created' || eventType === 'user.updated') {
     const { id, email_addresses, first_name, last_name, image_url } = evt.data
+
+    // Deliveries can arrive late or out of order (e.g. retries), so don't
+    // resurrect a user who has been deleted since the event was sent
+    if (!(await userExists(id))) {
+      console.log(`User ${id} no longer exists, skipping ${eventType}`)
+      return new Response('', { status: 200 })
+    }
 
     const primaryEmail = email_addresses?.find(
       email => email.id === evt.data.primary_email_address_id

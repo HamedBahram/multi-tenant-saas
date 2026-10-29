@@ -3,11 +3,9 @@
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { revalidatePath } from 'next/cache'
 import { db } from '@/lib/db'
+import * as taskData from '@/lib/data/tasks'
+import type { ActionResult } from '@/lib/data/result'
 import { TaskStatus } from '@/lib/generated/prisma/client'
-
-export type ActionResult<T = void> =
-  | { success: true; data: T }
-  | { success: false; error: string }
 
 async function getOrgIdOrThrow() {
   const { orgId } = await auth()
@@ -15,24 +13,6 @@ async function getOrgIdOrThrow() {
     throw new Error('You must be in an organization to perform this action')
   }
   return orgId
-}
-
-async function getOrCreateFirstProject(orgId: string) {
-  let project = await db.project.findFirst({
-    where: { orgId },
-    orderBy: { createdAt: 'asc' },
-  })
-
-  if (!project) {
-    project = await db.project.create({
-      data: {
-        name: 'My Project',
-        orgId,
-      },
-    })
-  }
-
-  return project
 }
 
 export async function createTask(
@@ -45,61 +25,19 @@ export async function createTask(
     const orgId = await getOrgIdOrThrow()
     const user = await currentUser()
 
-    // If no projectId provided, use the first project
-    let targetProjectId = projectId
-    if (!targetProjectId) {
-      const firstProject = await getOrCreateFirstProject(orgId)
-      targetProjectId = firstProject.id
-    } else {
-      // Never trust a client-supplied project: it must belong to the active org
-      const project = await db.project.findFirst({
-        where: { id: targetProjectId, orgId },
-      })
-      if (!project) {
-        return { success: false, error: 'Project not found' }
-      }
-    }
+    // Ensure the user exists in our database before assigning the task
+    if (user) await taskData.upsertUser(user)
 
-    // Ensure the user exists in our database (upsert)
-    if (user) {
-      await db.user.upsert({
-        where: { id: user.id },
-        update: {
-          email: user.primaryEmailAddress?.emailAddress,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          imageUrl: user.imageUrl,
-        },
-        create: {
-          id: user.id,
-          email: user.primaryEmailAddress?.emailAddress,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          imageUrl: user.imageUrl,
-        },
-      })
-    }
-
-    // Get the highest order value for tasks in this project with the target status
-    const lastTask = await db.task.findFirst({
-      where: { projectId: targetProjectId, status },
-      orderBy: { order: 'desc' },
+    const result = await taskData.createTask(orgId, {
+      title,
+      description,
+      projectId,
+      status,
+      assigneeId: user?.id,
     })
 
-    const task = await db.task.create({
-      data: {
-        title,
-        description: description || null,
-        orgId,
-        projectId: targetProjectId,
-        assigneeId: user?.id,
-        status,
-        order: (lastTask?.order ?? 0) + 1,
-      },
-    })
-
-    revalidatePath('/')
-    return { success: true, data: { id: task.id } }
+    if (result.success) revalidatePath('/')
+    return result
   } catch (error) {
     console.error('Failed to create task:', error)
     return {
@@ -116,31 +54,9 @@ export async function updateTaskStatus(
   try {
     const orgId = await getOrgIdOrThrow()
 
-    // Verify task belongs to this org
-    const task = await db.task.findFirst({
-      where: { id: taskId, orgId },
-    })
-
-    if (!task) {
-      return { success: false, error: 'Task not found' }
-    }
-
-    // Get the highest order value for tasks in the target status column
-    const lastTaskInColumn = await db.task.findFirst({
-      where: { projectId: task.projectId, status },
-      orderBy: { order: 'desc' },
-    })
-
-    await db.task.update({
-      where: { id: taskId },
-      data: {
-        status,
-        order: (lastTaskInColumn?.order ?? 0) + 1,
-      },
-    })
-
-    revalidatePath('/')
-    return { success: true, data: undefined }
+    const result = await taskData.updateTask(orgId, taskId, { status })
+    if (result.success) revalidatePath('/')
+    return result
   } catch (error) {
     console.error('Failed to update task status:', error)
     return {
@@ -183,21 +99,9 @@ export async function deleteTask(taskId: string): Promise<ActionResult> {
   try {
     const orgId = await getOrgIdOrThrow()
 
-    // Verify task belongs to this org
-    const task = await db.task.findFirst({
-      where: { id: taskId, orgId },
-    })
-
-    if (!task) {
-      return { success: false, error: 'Task not found' }
-    }
-
-    await db.task.delete({
-      where: { id: taskId },
-    })
-
-    revalidatePath('/')
-    return { success: true, data: undefined }
+    const result = await taskData.deleteTask(orgId, taskId)
+    if (result.success) revalidatePath('/')
+    return result
   } catch (error) {
     console.error('Failed to delete task:', error)
     return {
@@ -214,25 +118,9 @@ export async function updateTask(
   try {
     const orgId = await getOrgIdOrThrow()
 
-    // Verify task belongs to this org
-    const task = await db.task.findFirst({
-      where: { id: taskId, orgId },
-    })
-
-    if (!task) {
-      return { success: false, error: 'Task not found' }
-    }
-
-    await db.task.update({
-      where: { id: taskId },
-      data: {
-        ...(data.title !== undefined && { title: data.title }),
-        ...(data.description !== undefined && { description: data.description }),
-      },
-    })
-
-    revalidatePath('/')
-    return { success: true, data: undefined }
+    const result = await taskData.updateTask(orgId, taskId, data)
+    if (result.success) revalidatePath('/')
+    return result
   } catch (error) {
     console.error('Failed to update task:', error)
     return {

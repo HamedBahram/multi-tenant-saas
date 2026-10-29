@@ -3,10 +3,8 @@
 import { auth } from '@clerk/nextjs/server'
 import { revalidatePath } from 'next/cache'
 import { db } from '@/lib/db'
-
-export type ActionResult<T = void> =
-  | { success: true; data: T }
-  | { success: false; error: string }
+import * as projectData from '@/lib/data/projects'
+import type { ActionResult } from '@/lib/data/result'
 
 async function getOrgIdOrThrow() {
   const { orgId } = await auth()
@@ -41,31 +39,11 @@ export async function createProject(
     }
 
     // Check if user has Pro plan - gate multiple projects behind billing
-    const hasPro = has?.({ plan: 'pro' })
+    const hasPro = has?.({ plan: 'pro' }) ?? false
 
-    if (!hasPro) {
-      // Free tier: max 1 project
-      const projectCount = await db.project.count({
-        where: { orgId },
-      })
-
-      if (projectCount >= 1) {
-        return {
-          success: false,
-          error: 'Upgrade to Pro to create multiple projects.',
-        }
-      }
-    }
-
-    const project = await db.project.create({
-      data: {
-        name,
-        orgId,
-      },
-    })
-
-    revalidatePath('/')
-    return { success: true, data: { id: project.id } }
+    const result = await projectData.createProject(orgId, name, { hasPro })
+    if (result.success) revalidatePath('/')
+    return result
   } catch (error) {
     console.error('Failed to create project:', error)
     return {
@@ -76,40 +54,13 @@ export async function createProject(
   }
 }
 
-export async function deleteProject(
-  projectId: string
-): Promise<ActionResult> {
+export async function deleteProject(projectId: string): Promise<ActionResult> {
   try {
     const orgId = await getOrgIdOrThrow()
 
-    const project = await db.project.findFirst({
-      where: { id: projectId, orgId },
-    })
-
-    if (!project) {
-      return { success: false, error: 'Project not found' }
-    }
-
-    // Prevent deleting the last project
-    const projectCount = await db.project.count({
-      where: { orgId },
-    })
-
-    if (projectCount <= 1) {
-      return { success: false, error: 'Cannot delete your only project' }
-    }
-
-    // Delete all tasks in the project first
-    await db.task.deleteMany({
-      where: { projectId },
-    })
-
-    await db.project.delete({
-      where: { id: projectId },
-    })
-
-    revalidatePath('/')
-    return { success: true, data: undefined }
+    const result = await projectData.deleteProject(orgId, projectId)
+    if (result.success) revalidatePath('/')
+    return result
   } catch (error) {
     console.error('Failed to delete project:', error)
     return {
@@ -132,21 +83,9 @@ export async function renameProject(
   try {
     const orgId = await getOrgIdOrThrow()
 
-    const project = await db.project.findFirst({
-      where: { id: projectId, orgId },
-    })
-
-    if (!project) {
-      return { success: false, error: 'Project not found' }
-    }
-
-    await db.project.update({
-      where: { id: projectId },
-      data: { name: newName },
-    })
-
-    revalidatePath('/')
-    return { success: true, data: undefined }
+    const result = await projectData.renameProject(orgId, projectId, newName)
+    if (result.success) revalidatePath('/')
+    return result
   } catch (error) {
     console.error('Failed to rename project:', error)
     return {
